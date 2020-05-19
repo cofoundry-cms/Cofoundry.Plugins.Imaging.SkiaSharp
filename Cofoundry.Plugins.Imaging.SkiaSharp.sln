@@ -1,0 +1,36 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29905.134
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Cofoundry.Plugins.Imaging.SkiaSharp", "src\Cofoundry.Plugins.Imaging.SkiaSharp\Cofoundry.Plugins.Imaging.SkiaSharp.csproj", "{ECBD30CF-A8F9-411D-AD46-AE2B82B56189}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "samples", "samples", "{8B60BE57-0C4F-4BC4-A7F2-2ADFB7FCE645}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "SkiaSharpExample", "src\SkiaSharpExample\SkiaSharpExample.csproj", "{84AF2A45-AB3B-4AA0-91FF-F8C266E3F683}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{ECBD30CF-A8F9-411D-AD46-AE2B82B56189}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{ECBD30CF-A8F9-411D-AD46-AE2B82B56189}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{ECBD30CF-A8F9-411D-AD46-AE2B82B56189}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{ECBD30CF-A8F9-411D-AD46-AE2B82B56189}.Release|Any CPU.Build.0 = Release|Any CPU
+		{84AF2A45-AB3B-4AA0-91FF-F8C266E3F683}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{84AF2A45-AB3B-4AA0-91FF-F8C266E3F683}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{84AF2A45-AB3B-4AA0-91FF-F8C266E3F683}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{84AF2A45-AB3B-4AA0-91FF-F8C266E3F683}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{84AF2A45-AB3B-4AA0-91FF-F8C266E3F683} = {8B60BE57-0C4F-4BC4-A7F2-2ADFB7FCE645}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {AFB2AD99-7CB1-4669-A6AF-5E5CDD3EFFDC}
+	EndGlobalSection
+EndGlobal
