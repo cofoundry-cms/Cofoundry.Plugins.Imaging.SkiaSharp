@@ -32,9 +32,6 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp
         public void Validate(IImageResizeSettings settings, IImageAssetRenderable asset)
         {
             _imageResizeSettingsValidator.Validate(settings, asset);
-
-            // Scale mode not supported yet
-            settings.Scale = ImageScaleMode.Both;
         }
     }
 }

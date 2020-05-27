@@ -22,7 +22,7 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp
                     canvas.Clear(resizeSpecification.BackgroundColor.Value);
                 }
 
-                var newSize = new SKSizeI(resizeSpecification.ImageWidth, resizeSpecification.ImageHeight);
+                var newSize = new SKSizeI(resizeSpecification.UncroppedImageWidth, resizeSpecification.UncroppedImageHeight);
                 using (var resizedBitmap = sourceImage.Resize(newSize, SKFilterQuality.High))
                 using (var resizedImage = SKImage.FromBitmap(resizedBitmap))
                 {

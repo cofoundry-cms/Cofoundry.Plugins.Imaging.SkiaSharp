@@ -26,46 +26,29 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp
                 spec.CanvasWidth = sourceImage.Width;
                 spec.CanvasHeight = sourceImage.Height;
                 spec.AnchorAt = SKPoint.Empty;
-                spec.ImagePaintWidth = sourceImage.Width;
-                spec.ImagePaintHeight = sourceImage.Height;
-                spec.ImageWidth = sourceImage.Width;
-                spec.ImageHeight = sourceImage.Height;
+                spec.VisibleImageWidth = sourceImage.Width;
+                spec.VisibleImageHeight = sourceImage.Height;
+                spec.UncroppedImageWidth = sourceImage.Width;
+                spec.UncroppedImageHeight = sourceImage.Height;
+                spec.Origin = sourceCodec.EncodedOrigin;
 
                 return spec;
             }
 
-            // TODO: implement this properly and write some tests!
-            if (!resizeSettings.IsWidthSet() || resizeSettings.Height > resizeSettings.Width)
+            switch (resizeSettings.Mode)
             {
-                // Scale to height
-                spec.CanvasHeight = spec.ImagePaintHeight = spec.ImageHeight = resizeSettings.Height;
-
-                var heightRatio = (float)resizeSettings.Height / (float)sourceImage.Height;
-                var scaledWidth = Convert.ToInt32(Math.Ceiling(sourceImage.Width * heightRatio));
-                spec.CanvasWidth = spec.ImagePaintWidth = spec.ImageWidth = scaledWidth;
-
-                //if (resizeSettings.IsWidthSet())
-                //{
-                //    switch (resizeSettings.Mode)
-                //    {
-                //        case ImageFitMode.Crop:
-                //            break;
-                //    }
-                //}
-                //else
-                //{
-                //    // No width specified, so just use scaled height
-                //    spec.CanvasWidth = spec.ImagePaintWidth = spec.ImageWidth = scaledHeight;
-                //}
-            }
-            else
-            {
-                // Scale to width 
-                spec.CanvasWidth = spec.ImagePaintWidth = spec.ImageWidth = resizeSettings.Width;
-
-                var widthRatio = (float)resizeSettings.Width / (float)sourceImage.Width;
-                var scaledHeight = Convert.ToInt32(Math.Ceiling(sourceImage.Height * widthRatio));
-                spec.CanvasHeight = spec.ImagePaintHeight = spec.ImageHeight = scaledHeight;
+                case ImageFitMode.Crop:
+                case ImageFitMode.Default:
+                    SetCrop(spec, sourceImage, resizeSettings);
+                    break;
+                case ImageFitMode.Max:
+                    SetMax(spec, sourceImage, resizeSettings);
+                    break;
+                case ImageFitMode.Pad:
+                    SetPad(spec, sourceImage, resizeSettings);
+                    break;
+                default:
+                    throw new NotSupportedException($"ImagefitMode {resizeSettings.Mode} not supported.");
             }
 
             SetBackgroundColor(spec, sourceCodec, resizeSettings);
@@ -100,14 +83,123 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp
             }
         }
 
-        private ImageFitMode GetFitMode(IImageResizeSettings resizeSettings)
+        /// <summary>
+        /// Width and height are exact values - cropping is used if there is an
+        /// aspect ratio difference.
+        /// </summary>
+        private void SetCrop(
+            ResizeSpecification spec,
+            SKBitmap sourceImage,
+            IImageResizeSettings resizeSettings
+            )
         {
-            if (resizeSettings.Mode == ImageFitMode.Default)
+
+            if (!resizeSettings.IsWidthSet() || resizeSettings.Height > resizeSettings.Width)
             {
-                return ImageFitMode.Crop;
+                // Scale to height
+                spec.CanvasHeight = spec.VisibleImageHeight = spec.UncroppedImageHeight = resizeSettings.Height;
+
+                var heightRatio = GetResizeRatio(resizeSettings, resizeSettings.Height, sourceImage.Height);
+                var scaledWidth = RoundPixels(sourceImage.Width * heightRatio);
+
+                spec.CanvasWidth = spec.VisibleImageWidth = resizeSettings.IsWidthSet() ? resizeSettings.Width : scaledWidth;
+                spec.UncroppedImageWidth = scaledWidth;
+            }
+            else
+            {
+                // Scale to width 
+                spec.CanvasWidth = spec.VisibleImageWidth = spec.UncroppedImageWidth = resizeSettings.Width;
+
+                var widthRatio = GetResizeRatio(resizeSettings, resizeSettings.Width, sourceImage.Width);
+                var scaledHeight = RoundPixels(sourceImage.Height * widthRatio);
+
+                spec.CanvasHeight = spec.VisibleImageHeight = resizeSettings.IsHeightSet() ? resizeSettings.Height : scaledHeight;
+                spec.UncroppedImageHeight = scaledHeight;
+            }
+        }
+
+        /// <summary>
+        /// Width and height are considered maximum values. The resulting image may be smaller
+        //  to maintain its aspect ratio.
+        /// </summary>
+        private void SetMax(
+            ResizeSpecification spec,
+            SKBitmap sourceImage,
+            IImageResizeSettings resizeSettings
+            )
+        {
+            if (!resizeSettings.IsWidthSet() || (resizeSettings.IsHeightSet() && resizeSettings.Height < resizeSettings.Width))
+            {
+                // Scale to height
+                spec.CanvasHeight = spec.VisibleImageHeight = spec.UncroppedImageHeight = resizeSettings.Height;
+
+                var heightRatio = GetResizeRatio(resizeSettings, resizeSettings.Height, sourceImage.Height);
+                var scaledWidth = RoundPixels(sourceImage.Width * heightRatio);
+
+                spec.CanvasWidth = spec.UncroppedImageWidth = spec.VisibleImageWidth = scaledWidth;
+            }
+            else
+            {
+                // Scale to width 
+                spec.CanvasWidth = spec.VisibleImageWidth = spec.UncroppedImageWidth = resizeSettings.Width;
+
+                var widthRatio = GetResizeRatio(resizeSettings, resizeSettings.Width, sourceImage.Width);
+                var scaledHeight = RoundPixels(sourceImage.Height * widthRatio);
+
+                spec.CanvasHeight = spec.UncroppedImageHeight = spec.VisibleImageHeight = scaledHeight;
+            }
+        }
+
+        /// <summary>
+        /// Width and height are considered exact values - padding is used if there is an
+        /// aspect ratio difference.
+        /// </summary>
+        private void SetPad(
+            ResizeSpecification spec,
+            SKBitmap sourceImage,
+            IImageResizeSettings resizeSettings
+            )
+        {
+            if (!resizeSettings.IsWidthSet() || (resizeSettings.IsHeightSet() && resizeSettings.Height < resizeSettings.Width))
+            {
+                // Scale to height
+                spec.CanvasHeight = spec.VisibleImageHeight = spec.UncroppedImageHeight = resizeSettings.Height;
+
+                var heightRatio = GetResizeRatio(resizeSettings, resizeSettings.Height, sourceImage.Height);
+                var scaledWidth = RoundPixels(sourceImage.Width * heightRatio);
+
+                spec.CanvasWidth = resizeSettings.IsWidthSet() ? resizeSettings.Width : scaledWidth;
+                spec.UncroppedImageWidth = spec.VisibleImageWidth = scaledWidth;
+            }
+            else
+            {
+                // Scale to width 
+                spec.CanvasWidth = spec.VisibleImageWidth = spec.UncroppedImageWidth = resizeSettings.Width;
+
+                var widthRatio = GetResizeRatio(resizeSettings, resizeSettings.Width, sourceImage.Width);
+                var scaledHeight = RoundPixels(sourceImage.Height * widthRatio);
+
+                spec.CanvasHeight = resizeSettings.IsHeightSet() ? resizeSettings.Height : scaledHeight;
+                spec.UncroppedImageHeight = spec.VisibleImageHeight = scaledHeight;
+            }
+        }
+
+        private int RoundPixels(float pixels)
+        {
+            return Convert.ToInt32(Math.Round(pixels, MidpointRounding.AwayFromZero));
+        }
+
+        private float GetResizeRatio(IImageResizeSettings resizeSettings, int resizeValue, int sourceValue)
+        {
+            var ratio = (float)resizeValue / (float)sourceValue;
+
+            if ((ratio > 1 && resizeSettings.Scale == ImageScaleMode.DownscaleOnly)
+                || (ratio < 1 && resizeSettings.Scale == ImageScaleMode.UpscaleOnly))
+            {
+                ratio = 1;
             }
 
-            return resizeSettings.Mode;
+            return ratio;
         }
 
         private static bool SupportsTransparency(SKCodec sourceCodec)
