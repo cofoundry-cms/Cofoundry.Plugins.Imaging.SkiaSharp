@@ -129,12 +129,16 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp.Tests
 
         #region pad
 
-        [Fact]
-        public void Create_WhenPadWidthOnly_DoesNotPad()
+        [Theory]
+        [InlineData(ImageScaleMode.DownscaleOnly)]
+        [InlineData(ImageScaleMode.UpscaleCanvas)]
+        [InlineData(ImageScaleMode.Both)]
+        public void Create_WhenPadWidthOnly_DoesNotPad(ImageScaleMode imageScaleMode)
         {
             var resizeSettings = new ImageResizeSettings()
             {
                 Mode = ImageFitMode.Pad,
+                Scale = imageScaleMode,
                 Width = 500
             };
 
@@ -149,12 +153,16 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp.Tests
             Assert.Equal(336, result.VisibleImageHeight);
         }
 
-        [Fact]
-        public void Create_WhenPadHeightOnly_DoesNotPad()
+        [Theory]
+        [InlineData(ImageScaleMode.DownscaleOnly)]
+        [InlineData(ImageScaleMode.UpscaleCanvas)]
+        [InlineData(ImageScaleMode.Both)]
+        public void Create_WhenPadHeightOnly_DoesNotPad(ImageScaleMode imageScaleMode)
         {
             var resizeSettings = new ImageResizeSettings()
             {
                 Mode = ImageFitMode.Pad,
+                Scale = imageScaleMode,
                 Height = 500
             };
 
@@ -169,12 +177,16 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp.Tests
             Assert.Equal(500, result.VisibleImageHeight);
         }
 
-        [Fact]
-        public void Create_WhenPadWithShortWidth_HeightPadded()
+        [Theory]
+        [InlineData(ImageScaleMode.DownscaleOnly)]
+        [InlineData(ImageScaleMode.UpscaleCanvas)]
+        [InlineData(ImageScaleMode.Both)]
+        public void Create_WhenPadWithShortWidth_HeightPadded(ImageScaleMode imageScaleMode)
         {
             var resizeSettings = new ImageResizeSettings()
             {
                 Mode = ImageFitMode.Pad,
+                Scale = imageScaleMode,
                 Width = 500,
                 Height = 1000
             };
@@ -190,12 +202,16 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp.Tests
             Assert.Equal(336, result.VisibleImageHeight);
         }
 
-        [Fact]
-        public void Create_WhenPadWithShortHeight_WidthPadded()
+        [Theory]
+        [InlineData(ImageScaleMode.DownscaleOnly)]
+        [InlineData(ImageScaleMode.UpscaleCanvas)]
+        [InlineData(ImageScaleMode.Both)]
+        public void Create_WhenPadWithShortHeight_WidthPadded(ImageScaleMode imageScaleMode)
         {
             var resizeSettings = new ImageResizeSettings()
             {
                 Mode = ImageFitMode.Pad,
+                Scale = imageScaleMode,
                 Width = 1000,
                 Height = 500
             };
@@ -215,12 +231,16 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp.Tests
 
         #region max
 
-        [Fact]
-        public void Create_WhenMaxWithWidthOnly_Resizes()
+        [Theory]
+        [InlineData(ImageScaleMode.DownscaleOnly)]
+        [InlineData(ImageScaleMode.UpscaleCanvas)]
+        [InlineData(ImageScaleMode.Both)]
+        public void Create_WhenMaxWithWidthOnly_Resizes(ImageScaleMode imageScaleMode)
         {
             var resizeSettings = new ImageResizeSettings()
             {
                 Mode = ImageFitMode.Max,
+                Scale = imageScaleMode,
                 Width = 500
             };
 
@@ -235,12 +255,16 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp.Tests
             Assert.Equal(336, result.VisibleImageHeight);
         }
 
-        [Fact]
-        public void Create_WhenMaxWithHeightOnly_Resizes()
+        [Theory]
+        [InlineData(ImageScaleMode.DownscaleOnly)]
+        [InlineData(ImageScaleMode.UpscaleCanvas)]
+        [InlineData(ImageScaleMode.Both)]
+        public void Create_WhenMaxWithHeightOnly_Resizes(ImageScaleMode imageScaleMode)
         {
             var resizeSettings = new ImageResizeSettings()
             {
                 Mode = ImageFitMode.Max,
+                Scale = imageScaleMode,
                 Height = 500
             };
 
@@ -255,12 +279,16 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp.Tests
             Assert.Equal(500, result.VisibleImageHeight);
         }
 
-        [Fact]
-        public void Create_WhenMaxWithShortWidth_Resizes()
+        [Theory]
+        [InlineData(ImageScaleMode.DownscaleOnly)]
+        [InlineData(ImageScaleMode.UpscaleCanvas)]
+        [InlineData(ImageScaleMode.Both)]
+        public void Create_WhenMaxWithShortWidth_Resizes(ImageScaleMode imageScaleMode)
         {
             var resizeSettings = new ImageResizeSettings()
             {
                 Mode = ImageFitMode.Max,
+                Scale = imageScaleMode,
                 Width = 500,
                 Height = 1000
             };
@@ -276,12 +304,16 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp.Tests
             Assert.Equal(336, result.VisibleImageHeight);
         }
 
-        [Fact]
-        public void Create_WhenMaxWithShortHeight_Resizes()
+        [Theory]
+        [InlineData(ImageScaleMode.DownscaleOnly)]
+        [InlineData(ImageScaleMode.UpscaleCanvas)]
+        [InlineData(ImageScaleMode.Both)]
+        public void Create_WhenMaxWithShortHeight_Resizes(ImageScaleMode imageScaleMode)
         {
             var resizeSettings = new ImageResizeSettings()
             {
                 Mode = ImageFitMode.Max,
+                Scale = imageScaleMode,
                 Width = 1000,
                 Height = 500
             };
@@ -351,7 +383,11 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp.Tests
 
         #endregion
 
-        // + ImageScaleMode.Both, ImageScaleMode.DownscaleOnly, ImageScaleMode.UpscaleCanvas, ImageScaleMode.UpscaleOnly
+        #region ImageScaleMode.UpscaleCanvas
+
+        // TODO: Tests for UpscaleCanvas
+
+        #endregion
 
         private ResizeSpecification CreateSpecification(TestImage image, ImageResizeSettings imageResizeSettings)
         {

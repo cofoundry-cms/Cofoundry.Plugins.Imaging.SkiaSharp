@@ -97,25 +97,27 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp
             if (!resizeSettings.IsWidthSet() || resizeSettings.Height > resizeSettings.Width)
             {
                 // Scale to height
-                spec.CanvasHeight = spec.VisibleImageHeight = spec.UncroppedImageHeight = resizeSettings.Height;
-
                 var heightRatio = GetResizeRatio(resizeSettings, resizeSettings.Height, sourceImage.Height);
                 var scaledWidth = RoundPixels(sourceImage.Width * heightRatio);
+                var scaledHeight = RoundPixels(sourceImage.Height * heightRatio);
 
+                spec.CanvasHeight = spec.VisibleImageHeight = spec.UncroppedImageHeight = scaledHeight;// resizeSettings.Height;
                 spec.CanvasWidth = spec.VisibleImageWidth = resizeSettings.IsWidthSet() ? resizeSettings.Width : scaledWidth;
                 spec.UncroppedImageWidth = scaledWidth;
             }
             else
             {
                 // Scale to width 
-                spec.CanvasWidth = spec.VisibleImageWidth = spec.UncroppedImageWidth = resizeSettings.Width;
-
                 var widthRatio = GetResizeRatio(resizeSettings, resizeSettings.Width, sourceImage.Width);
                 var scaledHeight = RoundPixels(sourceImage.Height * widthRatio);
+                var scaledWidth = RoundPixels(sourceImage.Width * widthRatio);
 
+                spec.CanvasWidth = spec.VisibleImageWidth = spec.UncroppedImageWidth = scaledWidth;// resizeSettings.Width;
                 spec.CanvasHeight = spec.VisibleImageHeight = resizeSettings.IsHeightSet() ? resizeSettings.Height : scaledHeight;
                 spec.UncroppedImageHeight = scaledHeight;
             }
+
+            EnforceUpscaleCanvas(spec, resizeSettings);
         }
 
         /// <summary>
@@ -131,23 +133,25 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp
             if (!resizeSettings.IsWidthSet() || (resizeSettings.IsHeightSet() && resizeSettings.Height < resizeSettings.Width))
             {
                 // Scale to height
-                spec.CanvasHeight = spec.VisibleImageHeight = spec.UncroppedImageHeight = resizeSettings.Height;
-
                 var heightRatio = GetResizeRatio(resizeSettings, resizeSettings.Height, sourceImage.Height);
                 var scaledWidth = RoundPixels(sourceImage.Width * heightRatio);
+                var scaledHeight = RoundPixels(sourceImage.Height * heightRatio);
 
+                spec.CanvasHeight = spec.VisibleImageHeight = spec.UncroppedImageHeight = scaledHeight; // resizeSettings.Height;
                 spec.CanvasWidth = spec.UncroppedImageWidth = spec.VisibleImageWidth = scaledWidth;
             }
             else
             {
                 // Scale to width 
-                spec.CanvasWidth = spec.VisibleImageWidth = spec.UncroppedImageWidth = resizeSettings.Width;
-
                 var widthRatio = GetResizeRatio(resizeSettings, resizeSettings.Width, sourceImage.Width);
                 var scaledHeight = RoundPixels(sourceImage.Height * widthRatio);
+                var scaledWidth = RoundPixels(sourceImage.Width * widthRatio);
 
+                spec.CanvasWidth = spec.VisibleImageWidth = spec.UncroppedImageWidth = scaledWidth;
                 spec.CanvasHeight = spec.UncroppedImageHeight = spec.VisibleImageHeight = scaledHeight;
             }
+
+            EnforceUpscaleCanvas(spec, resizeSettings);
         }
 
         /// <summary>
@@ -163,25 +167,27 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp
             if (!resizeSettings.IsWidthSet() || (resizeSettings.IsHeightSet() && resizeSettings.Height < resizeSettings.Width))
             {
                 // Scale to height
-                spec.CanvasHeight = spec.VisibleImageHeight = spec.UncroppedImageHeight = resizeSettings.Height;
-
                 var heightRatio = GetResizeRatio(resizeSettings, resizeSettings.Height, sourceImage.Height);
                 var scaledWidth = RoundPixels(sourceImage.Width * heightRatio);
+                var scaledHeight = RoundPixels(sourceImage.Height * heightRatio);
 
+                spec.CanvasHeight = spec.VisibleImageHeight = spec.UncroppedImageHeight = scaledHeight;//resizeSettings.Height;
                 spec.CanvasWidth = resizeSettings.IsWidthSet() ? resizeSettings.Width : scaledWidth;
                 spec.UncroppedImageWidth = spec.VisibleImageWidth = scaledWidth;
             }
             else
             {
                 // Scale to width 
-                spec.CanvasWidth = spec.VisibleImageWidth = spec.UncroppedImageWidth = resizeSettings.Width;
-
                 var widthRatio = GetResizeRatio(resizeSettings, resizeSettings.Width, sourceImage.Width);
                 var scaledHeight = RoundPixels(sourceImage.Height * widthRatio);
+                var scaledWidth = RoundPixels(sourceImage.Width * widthRatio);
 
+                spec.CanvasWidth = spec.VisibleImageWidth = spec.UncroppedImageWidth = scaledWidth;// resizeSettings.Width;
                 spec.CanvasHeight = resizeSettings.IsHeightSet() ? resizeSettings.Height : scaledHeight;
                 spec.UncroppedImageHeight = spec.VisibleImageHeight = scaledHeight;
             }
+
+            EnforceUpscaleCanvas(spec, resizeSettings);
         }
 
         private int RoundPixels(float pixels)
@@ -189,11 +195,61 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp
             return Convert.ToInt32(Math.Round(pixels, MidpointRounding.AwayFromZero));
         }
 
+        /// <summary>
+        /// When using ImageScaleMode.UpscaleCanvas, the canvas need to be 
+        /// reset to the original setting as it will have been scaled with a 
+        /// capped ratio.
+        /// </summary>
+        private void EnforceUpscaleCanvas(
+            ResizeSpecification spec,
+            IImageResizeSettings resizeSettings
+            )
+        {
+            if (resizeSettings.Scale != ImageScaleMode.UpscaleCanvas) return;
+
+            // TODO: YAH: what should happen with max?
+            //if (resizeSettings.Mode == ImageFitMode.Max) return;
+
+            //var isSmallestDimensionWidth = spec.CanvasWidth < spec.CanvasHeight;
+
+            // In ImageFitMode.Max mode, only upscale if the image has not been able to reach any of the 
+            // specified dimensions, and even then, only scale the largest 
+            if (resizeSettings.Mode == ImageFitMode.Max
+                && (!resizeSettings.IsHeightSet() || spec.CanvasHeight < resizeSettings.Height)
+                && (!resizeSettings.IsWidthSet() || spec.CanvasWidth < resizeSettings.Width))
+            {
+                if (!resizeSettings.IsHeightSet() || spec.CanvasWidth < spec.CanvasHeight)
+                {
+                    spec.CanvasWidth = resizeSettings.Width;
+                }
+                else
+                {
+                    spec.CanvasHeight = resizeSettings.Height;
+                }
+            }
+            else if (resizeSettings.Mode != ImageFitMode.Max)
+            {
+                if (spec.CanvasHeight < resizeSettings.Height)
+                {
+                    spec.CanvasHeight = resizeSettings.Height;
+                }
+
+                if (spec.CanvasWidth < resizeSettings.Width)
+                {
+                    spec.CanvasWidth = resizeSettings.Width;
+                }
+            }
+        }
+
+        /// <summary>
+        /// Calculated the ratio to apply to image dimensions, taking into account
+        /// the ImageScaleMode setting, which can be used to limit scaling behavior.
+        /// </summary>
         private float GetResizeRatio(IImageResizeSettings resizeSettings, int resizeValue, int sourceValue)
         {
             var ratio = (float)resizeValue / (float)sourceValue;
 
-            if ((ratio > 1 && resizeSettings.Scale == ImageScaleMode.DownscaleOnly)
+            if ((ratio > 1 && (resizeSettings.Scale == ImageScaleMode.DownscaleOnly || resizeSettings.Scale == ImageScaleMode.UpscaleCanvas))
                 || (ratio < 1 && resizeSettings.Scale == ImageScaleMode.UpscaleOnly))
             {
                 ratio = 1;
