@@ -22,7 +22,7 @@ namespace SkiaSharpExample
         public void ConfigureServices(IServiceCollection services)
         {
             services
-                .AddControllersWithViews()
+                .AddRazorPages()
                 .AddCofoundry(Configuration);
         }
 

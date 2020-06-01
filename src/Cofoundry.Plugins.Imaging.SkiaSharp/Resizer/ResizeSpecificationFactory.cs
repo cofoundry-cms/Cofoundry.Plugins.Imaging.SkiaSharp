@@ -52,6 +52,7 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp
             }
 
             SetBackgroundColor(spec, sourceCodec, resizeSettings);
+            SetAnchor(spec, resizeSettings);
 
             return spec;
         }
@@ -207,11 +208,6 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp
         {
             if (resizeSettings.Scale != ImageScaleMode.UpscaleCanvas) return;
 
-            // TODO: YAH: what should happen with max?
-            //if (resizeSettings.Mode == ImageFitMode.Max) return;
-
-            //var isSmallestDimensionWidth = spec.CanvasWidth < spec.CanvasHeight;
-
             // In ImageFitMode.Max mode, only upscale if the image has not been able to reach any of the 
             // specified dimensions, and even then, only scale the largest 
             if (resizeSettings.Mode == ImageFitMode.Max
@@ -239,6 +235,69 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp
                     spec.CanvasWidth = resizeSettings.Width;
                 }
             }
+        }
+
+        private void SetAnchor(ResizeSpecification spec, IImageResizeSettings resizeSettings)
+        {
+            switch (resizeSettings.Anchor)
+            {
+                case ImageAnchorLocation.BottomCenter:
+                    spec.AnchorAt = new SKPoint(CalculateAnchorVerticalMiddle(spec), CalculateAnchorBottom(spec));
+                    break;
+                case ImageAnchorLocation.BottomLeft:
+                    spec.AnchorAt = new SKPoint(0, CalculateAnchorBottom(spec));
+                    break;
+                case ImageAnchorLocation.BottomRight:
+                    spec.AnchorAt = new SKPoint(CalculateAnchorRight(spec), CalculateAnchorBottom(spec));
+                    break;
+                case ImageAnchorLocation.MiddleCenter:
+                    spec.AnchorAt = new SKPoint(CalculateAnchorHotizontalCenter(spec), CalculateAnchorVerticalMiddle(spec));
+                    break;
+                case ImageAnchorLocation.MiddleLeft:
+                    spec.AnchorAt = new SKPoint(0, CalculateAnchorVerticalMiddle(spec));
+                    break;
+                case ImageAnchorLocation.MiddleRight:
+                    spec.AnchorAt = new SKPoint(CalculateAnchorRight(spec), CalculateAnchorVerticalMiddle(spec));
+                    break;
+                case ImageAnchorLocation.TopCenter:
+                    spec.AnchorAt = new SKPoint(CalculateAnchorVerticalMiddle(spec), 0);
+                    break;
+                case ImageAnchorLocation.TopLeft:
+                    spec.AnchorAt = new SKPoint(0, 0);
+                    break;
+                case ImageAnchorLocation.TopRight:
+                    spec.AnchorAt = new SKPoint(CalculateAnchorRight(spec), 0);
+                    break;
+            }
+        }
+
+        private float CalculateAnchorBottom(ResizeSpecification spec)
+        {
+            return CalculateAnchorOffset(spec.CanvasHeight, spec.UncroppedImageHeight);
+        }
+
+        private float CalculateAnchorRight(ResizeSpecification spec)
+        {
+            return CalculateAnchorOffset(spec.CanvasWidth, spec.UncroppedImageWidth);
+        }
+
+        private float CalculateAnchorVerticalMiddle(ResizeSpecification spec)
+        {
+            return CalculateAnchorOffset(spec.CanvasHeight, spec.UncroppedImageHeight) / 2;
+        }
+
+        private float CalculateAnchorHotizontalCenter(ResizeSpecification spec)
+        {
+            return CalculateAnchorOffset(spec.CanvasWidth, spec.UncroppedImageWidth) / 2;
+        }
+
+        private float CalculateAnchorOffset(int visiableLength, int uncroppedLength)
+        {
+            var difference = visiableLength - uncroppedLength;
+
+            if (difference == 0) return 0;
+
+            return difference;
         }
 
         /// <summary>

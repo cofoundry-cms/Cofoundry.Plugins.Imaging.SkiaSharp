@@ -7,16 +7,12 @@ using System.Text;
 namespace Cofoundry.Plugins.Imaging.SkiaSharp
 {
     /// <summary>
-    /// An attempt to cover some of the most popular image sharp configuration
-    /// settings. Anything more compilated can be acheived by setting the ImageSharp
-    /// configuration manually by implementing your own IImageSharpInitializer or 
-    /// by configuring SixLabors.ImageSharp.Configuration.Default. 
+    /// Basic settings for image resizing behavior using SkiaSharp.
     /// </summary>
     public class SkiaSharpSettings : PluginConfigurationSettingsBase
     {
         public SkiaSharpSettings()
         {
-            IgnoreMetadata = true;
             JpegQuality = 85;
         }
 
@@ -27,15 +23,16 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp
         public int JpegQuality { get; set; }
 
         /// <summary>
-        /// Indicates whether the metadata should be ignored when the
-        /// image is being encoded.
-        /// </summary>
-        public bool IgnoreMetadata { get; set; }
-
-        /// <summary>
         /// Gifs can be saved but not resized. Use this to customize the 
         /// fallback behaviour
         /// </summary>
         public GifResizeBehaviour GifResizeBehaviour { get; set; }
+
+        /// <summary>
+        /// Disables reading and writing of caching of resized image files.
+        /// Useful for debugging, but note that cache headers are still set and
+        /// files may be cached upstream.
+        /// </summary>
+        public bool DisableFileCache { get; set; }
     }
 }

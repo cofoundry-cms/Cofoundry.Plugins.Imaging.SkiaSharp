@@ -8,6 +8,7 @@ using System.IO;
 using System.Threading.Tasks;
 using System.Diagnostics;
 using Microsoft.Extensions.Logging;
+using SkiaSharp;
 
 namespace Cofoundry.Plugins.Imaging.SkiaSharp
 {
@@ -26,6 +27,7 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp
         private readonly ISkiaSharpResizeSettingsValidator _skiaSharpResizeSettingsValidator;
         private readonly IResizeSpecificationFactory _resizeSpecificationFactory;
         private readonly ISkiaSharpImageResizer _skiaSharpImageResizer;
+        private readonly SkiaSharpSettings _skiaSharpSettings;
         private readonly ILogger<SkiaSharpResizedImageAssetFileService> _logger;
 
         #endregion
@@ -38,6 +40,7 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp
             ISkiaSharpResizeSettingsValidator skiaSharpResizeSettingsValidator,
             IResizeSpecificationFactory resizeSpecificationFactory,
             ISkiaSharpImageResizer skiaSharpImageResizer,
+            SkiaSharpSettings skiaSharpSettings,
             ILogger<SkiaSharpResizedImageAssetFileService> logger
             )
         {
@@ -47,6 +50,7 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp
             _skiaSharpResizeSettingsValidator = skiaSharpResizeSettingsValidator;
             _resizeSpecificationFactory = resizeSpecificationFactory;
             _skiaSharpImageResizer = skiaSharpImageResizer;
+            _skiaSharpSettings = skiaSharpSettings;
         }
 
         #endregion
@@ -64,7 +68,7 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp
 
             var fullFileName = CreateCacheFilePathAndName(resizeSettings, asset);
 
-            if (await _fileService.ExistsAsync(IMAGE_ASSET_CACHE_CONTAINER_NAME, fullFileName))
+            if (!_skiaSharpSettings.DisableFileCache && await _fileService.ExistsAsync(IMAGE_ASSET_CACHE_CONTAINER_NAME, fullFileName))
             {
                 return await _fileService.GetAsync(IMAGE_ASSET_CACHE_CONTAINER_NAME, fullFileName);
             }
@@ -77,8 +81,8 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp
                     var resizeSpecification = _resizeSpecificationFactory.Create(imageSource.Codec, imageSource.Bitmap, resizeSettings);
                     var resizedImage = _skiaSharpImageResizer.Resize(imageSource.Bitmap, resizeSpecification);
 
-                    // TODO: ensure transparency on pngs, allow for customizable quality levels
-                    var data = resizedImage.Encode(imageSource.Codec.EncodedFormat, 70);
+                    // Skia only supports a quality setting for Jpeg
+                    var data = resizedImage.Encode(imageSource.Codec.EncodedFormat, _skiaSharpSettings.JpegQuality);
 
                     if (data == null)
                     {
@@ -89,6 +93,17 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp
                     outputStream = data.AsStream(true);
                 }
 
+                await WriteImageToFileCacheAsync(fullFileName, outputStream);
+
+                outputStream.Position = 0;
+                return outputStream;
+            }
+        }
+
+        private async Task WriteImageToFileCacheAsync(string fullFileName, Stream outputStream)
+        {
+            if (!_skiaSharpSettings.DisableFileCache)
+            {
                 try
                 {
                     // Try and create the cache file, but don't throw an error if it fails - it will be attempted again on the next request
@@ -106,12 +121,9 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp
                         _logger.LogError(0, ex, "Error creating image asset cache file. Container name {ContainerName}, {fullFileName}", IMAGE_ASSET_CACHE_CONTAINER_NAME, fullFileName);
                     }
                 }
-
-                outputStream.Position = 0;
-                return outputStream;
             }
         }
-        
+
         public Task ClearAsync(string fileNameOnDisk)
         {
             return _fileService.DeleteDirectoryAsync(IMAGE_ASSET_CACHE_CONTAINER_NAME, fileNameOnDisk);

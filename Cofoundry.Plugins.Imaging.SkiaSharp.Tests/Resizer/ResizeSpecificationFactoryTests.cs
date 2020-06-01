@@ -385,7 +385,53 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp.Tests
 
         #region ImageScaleMode.UpscaleCanvas
 
-        // TODO: Tests for UpscaleCanvas
+        [Theory]
+        [InlineData(ImageFitMode.Crop)]
+        [InlineData(ImageFitMode.Pad)]
+        [InlineData(ImageFitMode.Max)]
+        public void Create_WhenUpscaleCanvasAndCropAndWidthOnly_UpscalesCanvasOnly(ImageFitMode fitMode)
+        {
+            var resizeSettings = new ImageResizeSettings()
+            {
+                Mode = fitMode,
+                Scale = ImageScaleMode.UpscaleCanvas,
+                Width = 2500
+            };
+
+            var testImage = TestImages.Landscape_2048x1375;
+            var result = CreateSpecification(testImage, resizeSettings);
+
+            Assert.Equal(2500, result.CanvasWidth);
+            Assert.Equal(2048, result.UncroppedImageWidth);
+            Assert.Equal(2048, result.VisibleImageWidth);
+            Assert.Equal(1375, result.CanvasHeight);
+            Assert.Equal(1375, result.UncroppedImageHeight);
+            Assert.Equal(1375, result.VisibleImageHeight);
+        }
+
+        [Theory]
+        [InlineData(ImageFitMode.Crop)]
+        [InlineData(ImageFitMode.Pad)]
+        [InlineData(ImageFitMode.Max)]
+        public void Create_WhenUpscaleCanvasAndCropAndHeightOnly_UpscalesCanvasOnly(ImageFitMode fitMode)
+        {
+            var resizeSettings = new ImageResizeSettings()
+            {
+                Mode = fitMode,
+                Scale = ImageScaleMode.UpscaleCanvas,
+                Height = 2500
+            };
+
+            var testImage = TestImages.Landscape_2048x1375;
+            var result = CreateSpecification(testImage, resizeSettings);
+
+            Assert.Equal(2048, result.CanvasWidth);
+            Assert.Equal(2048, result.UncroppedImageWidth);
+            Assert.Equal(2048, result.VisibleImageWidth);
+            Assert.Equal(2500, result.CanvasHeight);
+            Assert.Equal(1375, result.UncroppedImageHeight);
+            Assert.Equal(1375, result.VisibleImageHeight);
+        }
 
         #endregion
 

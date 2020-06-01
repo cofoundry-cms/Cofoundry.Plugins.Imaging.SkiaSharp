@@ -12,6 +12,13 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp
         {
             var canvasSpecification = sourceImage.Info.WithSize(resizeSpecification.CanvasWidth, resizeSpecification.CanvasHeight);
 
+            // Some formats that support transparency aren't always saved with transparency enabled, so we
+            // need to enable this to avoid a black background when padding
+            if (resizeSpecification.UsesTransparency && canvasSpecification.AlphaType != SKAlphaType.Premul)
+            {
+                canvasSpecification = canvasSpecification.WithAlphaType(SKAlphaType.Premul);
+            }
+
             using (var surface = SKSurface.Create(canvasSpecification))
             {
                 var canvas = surface.Canvas;

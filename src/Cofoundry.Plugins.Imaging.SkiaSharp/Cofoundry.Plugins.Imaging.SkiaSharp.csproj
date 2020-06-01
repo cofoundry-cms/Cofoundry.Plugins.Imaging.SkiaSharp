@@ -20,7 +20,7 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Cofoundry.Web" Version="0.6.2-feaure-360-netc-0027" />
+    <PackageReference Include="Cofoundry.Web" Version="0.6.2-feaure-360-netc-0028" />
     <PackageReference Include="SkiaSharp" Version="1.68.2.1" />
   </ItemGroup>
   
