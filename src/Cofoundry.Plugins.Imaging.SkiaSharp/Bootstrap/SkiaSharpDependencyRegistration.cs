@@ -15,7 +15,6 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp
             container
                 .Register<IImageAssetFileService, SkiaSharpImageAssetFileService>(overrideOptions)
                 .Register<IResizedImageAssetFileService, SkiaSharpResizedImageAssetFileService>(overrideOptions)
-                .Register<ISkiaSharpInitializer, DefaultSkiaSharpInitializer>()
                 .Register<ISkiaSharpResizeSettingsValidator, SkiaSharpResizeSettingsValidator>()
                 .Register<IResizeSpecificationFactory, ResizeSpecificationFactory>()
                 .Register<ISkiaSharpImageResizer, SkiaSharpImageResizer>()
