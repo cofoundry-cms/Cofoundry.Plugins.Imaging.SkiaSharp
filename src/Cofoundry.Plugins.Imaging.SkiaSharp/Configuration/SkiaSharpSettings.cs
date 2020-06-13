@@ -24,7 +24,7 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp
 
         /// <summary>
         /// Gifs can be saved but not resized. Use this to customize the 
-        /// fallback behaviour
+        /// fallback behaviour.
         /// </summary>
         public GifResizeBehaviour GifResizeBehaviour { get; set; }
 

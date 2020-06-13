@@ -94,11 +94,13 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp
             IImageResizeSettings resizeSettings
             )
         {
+            var widthRatio = GetResizeRatio(resizeSettings, resizeSettings.Width, sourceImage.Width);
+            var heightRatio = GetResizeRatio(resizeSettings, resizeSettings.Height, sourceImage.Height);
 
-            if (!resizeSettings.IsWidthSet() || resizeSettings.Height > resizeSettings.Width)
+            if (!resizeSettings.IsWidthSet() || heightRatio > widthRatio)
             {
                 // Scale to height
-                var heightRatio = GetResizeRatio(resizeSettings, resizeSettings.Height, sourceImage.Height);
+                heightRatio = GetResizeRatio(resizeSettings, resizeSettings.Height, sourceImage.Height);
                 var scaledWidth = RoundPixels(sourceImage.Width * heightRatio);
                 var scaledHeight = RoundPixels(sourceImage.Height * heightRatio);
 
@@ -109,7 +111,7 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp
             else
             {
                 // Scale to width 
-                var widthRatio = GetResizeRatio(resizeSettings, resizeSettings.Width, sourceImage.Width);
+                widthRatio = GetResizeRatio(resizeSettings, resizeSettings.Width, sourceImage.Width);
                 var scaledHeight = RoundPixels(sourceImage.Height * widthRatio);
                 var scaledWidth = RoundPixels(sourceImage.Width * widthRatio);
 
@@ -131,10 +133,12 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp
             IImageResizeSettings resizeSettings
             )
         {
-            if (!resizeSettings.IsWidthSet() || (resizeSettings.IsHeightSet() && resizeSettings.Height < resizeSettings.Width))
+            var heightRatio = GetResizeRatio(resizeSettings, resizeSettings.Height, sourceImage.Height);
+            var widthRatio = GetResizeRatio(resizeSettings, resizeSettings.Width, sourceImage.Width);
+
+            if (!resizeSettings.IsWidthSet() || (resizeSettings.IsHeightSet() && heightRatio < widthRatio))
             {
                 // Scale to height
-                var heightRatio = GetResizeRatio(resizeSettings, resizeSettings.Height, sourceImage.Height);
                 var scaledWidth = RoundPixels(sourceImage.Width * heightRatio);
                 var scaledHeight = RoundPixels(sourceImage.Height * heightRatio);
 
@@ -144,7 +148,6 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp
             else
             {
                 // Scale to width 
-                var widthRatio = GetResizeRatio(resizeSettings, resizeSettings.Width, sourceImage.Width);
                 var scaledHeight = RoundPixels(sourceImage.Height * widthRatio);
                 var scaledWidth = RoundPixels(sourceImage.Width * widthRatio);
 
@@ -165,10 +168,12 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp
             IImageResizeSettings resizeSettings
             )
         {
-            if (!resizeSettings.IsWidthSet() || (resizeSettings.IsHeightSet() && resizeSettings.Height < resizeSettings.Width))
+            var heightRatio = GetResizeRatio(resizeSettings, resizeSettings.Height, sourceImage.Height);
+            var widthRatio = GetResizeRatio(resizeSettings, resizeSettings.Width, sourceImage.Width);
+
+            if (!resizeSettings.IsWidthSet() || (resizeSettings.IsHeightSet() && heightRatio < widthRatio))
             {
                 // Scale to height
-                var heightRatio = GetResizeRatio(resizeSettings, resizeSettings.Height, sourceImage.Height);
                 var scaledWidth = RoundPixels(sourceImage.Width * heightRatio);
                 var scaledHeight = RoundPixels(sourceImage.Height * heightRatio);
 
@@ -179,7 +184,6 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp
             else
             {
                 // Scale to width 
-                var widthRatio = GetResizeRatio(resizeSettings, resizeSettings.Width, sourceImage.Width);
                 var scaledHeight = RoundPixels(sourceImage.Height * widthRatio);
                 var scaledWidth = RoundPixels(sourceImage.Width * widthRatio);
 
