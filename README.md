@@ -16,7 +16,7 @@ This plugin uses the [SkiaSharp](https://github.com/mono/SkiaSharp) wrapper libr
 
 The services register themselves automatically so typically no other configuration is required. The following configuration settings can be used to tweak the image output:
 
-- **Cofoundry:Plugins:SkiaSharp:JpegQuality** Jpeg quality setting out of 100. Defaults to *85*.
+- **Cofoundry:Plugins:SkiaSharp:JpegQuality** Jpeg quality setting out of 100. Defaults to 85.
 - **Cofoundry:Plugins:SkiaSharp:GifResizeBehaviour** Gifs can be saved but not resized. Use this to customize the  fallback behaviour. Options are: 
   - Auto: Save single frame gifs as PNGs, but leave animated gifs untouched and do not resize them.
   - NoResize: Dont resize, output the original image instead.
