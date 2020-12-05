@@ -20,8 +20,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="Cofoundry.Web" Version="0.7.0" />
-    <PackageReference Include="SkiaSharp" Version="1.68.3" />
+    <PackageReference Include="Cofoundry.Web" Version="0.8.0" />
+    <PackageReference Include="SkiaSharp" Version="2.80.2" />
   </ItemGroup>
   
 </Project>
