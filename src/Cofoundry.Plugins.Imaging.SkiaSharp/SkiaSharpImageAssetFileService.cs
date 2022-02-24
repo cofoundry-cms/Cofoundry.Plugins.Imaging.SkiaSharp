@@ -6,8 +6,6 @@ using SkiaSharp;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace Cofoundry.Plugins.Imaging.SkiaSharp
@@ -22,8 +20,6 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp
             { SKEncodedImageFormat.Png, "png" },
             { SKEncodedImageFormat.Webp, "webp" }
         };
-
-        #region constructor
 
         private readonly CofoundryDbContext _dbContext;
         private readonly IFileStoreService _fileStoreService;
@@ -46,10 +42,8 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp
             _skiaSharpSettings = skiaSharpSettings;
         }
 
-        #endregion
-
         public async Task SaveAsync(
-            IUploadedFile uploadedFile,
+            IFileSource uploadedFile,
             ImageAsset imageAsset,
             string propertyName
             )
@@ -117,7 +111,7 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp
 
         private void ValidateCodec(
             SKCodec codec,
-            IUploadedFile uploadedFile,
+            IFileSource uploadedFile,
             string propertyName
             )
         {
@@ -128,7 +122,7 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp
                 if ((!string.IsNullOrEmpty(fileExtension) && !ImageAssetConstants.PermittedImageTypes.ContainsKey(fileExtension))
                     || (!string.IsNullOrEmpty(uploadedFile.MimeType) && !ImageAssetConstants.PermittedImageTypes.ContainsValue(uploadedFile.MimeType)))
                 {
-                    throw new PropertyValidationException("The file is not a supported image type.", propertyName);
+                    throw ValidationErrorException.CreateWithProperties("The file is not a supported image type.", propertyName);
                 }
 
                 throw new Exception("SkiaSharp does not recognise the file as an image type.");
@@ -157,7 +151,7 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp
         {
             if (amount > maximum)
             {
-                throw new PropertyValidationException($"Image exceeds the {dimensionName} permitted width of {maximum} pixels.", propertyName);
+                throw ValidationErrorException.CreateWithProperties($"Image exceeds the {dimensionName} permitted width of {maximum} pixels.", propertyName);
             }
         }
     }

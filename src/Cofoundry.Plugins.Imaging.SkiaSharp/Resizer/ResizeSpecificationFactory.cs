@@ -312,8 +312,7 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp
         {
             var ratio = (float)resizeValue / (float)sourceValue;
 
-            if ((ratio > 1 && (resizeSettings.Scale == ImageScaleMode.DownscaleOnly || resizeSettings.Scale == ImageScaleMode.UpscaleCanvas))
-                || (ratio < 1 && resizeSettings.Scale == ImageScaleMode.UpscaleOnly))
+            if (ratio > 1 && (resizeSettings.Scale == ImageScaleMode.DownscaleOnly || resizeSettings.Scale == ImageScaleMode.UpscaleCanvas))
             {
                 ratio = 1;
             }

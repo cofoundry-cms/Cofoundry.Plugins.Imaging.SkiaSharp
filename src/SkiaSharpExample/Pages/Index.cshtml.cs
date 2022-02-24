@@ -1,32 +1,33 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using Cofoundry.Domain;
+﻿using Cofoundry.Domain;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using System.Threading.Tasks;
 
 namespace SkiaSharpExample.Pages
 {
     public class IndexModel : PageModel
     {
-        private readonly IImageAssetRepository _imageAssetRepository;
+        private readonly IContentRepository _contentRepository;
 
         public IndexModel(
-            IImageAssetRepository imageAssetRepository
+            IContentRepository contentRepository
             )
         {
-            _imageAssetRepository = imageAssetRepository;
             ImageAssetId = 1;
             Width = 600;
             Height = 400;
+            _contentRepository = contentRepository;
         }
 
         public async Task<IActionResult> OnGetAsync()
         {
             if (ImageAssetId.HasValue)
             {
-                ImageAsset = await _imageAssetRepository.GetImageAssetRenderDetailsByIdAsync(ImageAssetId.Value);
+                ImageAsset = await _contentRepository
+                    .ImageAssets()
+                    .GetById(ImageAssetId.Value)
+                    .AsRenderDetails()
+                    .ExecuteAsync();
             }
 
             return Page();
