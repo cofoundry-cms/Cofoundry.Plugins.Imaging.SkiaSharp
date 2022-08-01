@@ -1,171 +1,152 @@
 ﻿using Cofoundry.Domain;
 using Cofoundry.Domain.CQS;
 using Cofoundry.Domain.Data;
-using System;
-using System.Collections.Generic;
-using System.Text;
-using System.IO;
-using System.Threading.Tasks;
-using System.Diagnostics;
 using Microsoft.Extensions.Logging;
-using SkiaSharp;
+using System.Diagnostics;
 
-namespace Cofoundry.Plugins.Imaging.SkiaSharp
+namespace Cofoundry.Plugins.Imaging.SkiaSharp;
+
+/// <summary>
+/// Service for resizing and caching the resulting image.
+/// </summary>
+public class SkiaSharpResizedImageAssetFileService : IResizedImageAssetFileService
 {
-    /// <summary>
-    /// Service for resizing and caching the resulting image.
-    /// </summary>
-    public class SkiaSharpResizedImageAssetFileService : IResizedImageAssetFileService
+    internal static readonly string IMAGE_ASSET_CACHE_CONTAINER_NAME = "ImageAssetCache";
+    private readonly string GIF_FILE_EXTENSION = "gif";
+
+    private readonly IFileStoreService _fileService;
+    private readonly IQueryExecutor _queryExecutor;
+    private readonly ISkiaSharpResizeSettingsValidator _skiaSharpResizeSettingsValidator;
+    private readonly IResizeSpecificationFactory _resizeSpecificationFactory;
+    private readonly ISkiaSharpImageResizer _skiaSharpImageResizer;
+    private readonly SkiaSharpSettings _skiaSharpSettings;
+    private readonly ILogger<SkiaSharpResizedImageAssetFileService> _logger;
+
+    public SkiaSharpResizedImageAssetFileService(
+        IFileStoreService fileService,
+        IQueryExecutor queryExecutor,
+        ISkiaSharpResizeSettingsValidator skiaSharpResizeSettingsValidator,
+        IResizeSpecificationFactory resizeSpecificationFactory,
+        ISkiaSharpImageResizer skiaSharpImageResizer,
+        SkiaSharpSettings skiaSharpSettings,
+        ILogger<SkiaSharpResizedImageAssetFileService> logger
+        )
     {
-        #region private member variables
+        _fileService = fileService;
+        _queryExecutor = queryExecutor;
+        _logger = logger;
+        _skiaSharpResizeSettingsValidator = skiaSharpResizeSettingsValidator;
+        _resizeSpecificationFactory = resizeSpecificationFactory;
+        _skiaSharpImageResizer = skiaSharpImageResizer;
+        _skiaSharpSettings = skiaSharpSettings;
+    }
 
-        internal static readonly string IMAGE_ASSET_CACHE_CONTAINER_NAME = "ImageAssetCache";
-        private readonly string GIF_FILE_EXTENSION = "gif";
+    public async Task<Stream> GetAsync(IImageAssetRenderable asset, IImageResizeSettings resizeSettings)
+    {
+        _skiaSharpResizeSettingsValidator.Validate(resizeSettings, asset);
 
-        private readonly IFileStoreService _fileService;
-        private readonly IQueryExecutor _queryExecutor;
-        private readonly ISkiaSharpResizeSettingsValidator _skiaSharpResizeSettingsValidator;
-        private readonly IResizeSpecificationFactory _resizeSpecificationFactory;
-        private readonly ISkiaSharpImageResizer _skiaSharpImageResizer;
-        private readonly SkiaSharpSettings _skiaSharpSettings;
-        private readonly ILogger<SkiaSharpResizedImageAssetFileService> _logger;
-
-        #endregion
-
-        #region constructor
-
-        public SkiaSharpResizedImageAssetFileService(
-            IFileStoreService fileService,
-            IQueryExecutor queryExecutor,
-            ISkiaSharpResizeSettingsValidator skiaSharpResizeSettingsValidator,
-            IResizeSpecificationFactory resizeSpecificationFactory,
-            ISkiaSharpImageResizer skiaSharpImageResizer,
-            SkiaSharpSettings skiaSharpSettings,
-            ILogger<SkiaSharpResizedImageAssetFileService> logger
-            )
+        // Saving gifs is not supported by SkiaSharp, so they will either be reencoded to another 
+        // format on upload or left as unresizeable.
+        if (!resizeSettings.RequiresResizing(asset) || (asset.FileExtension == GIF_FILE_EXTENSION))
         {
-            _fileService = fileService;
-            _queryExecutor = queryExecutor;
-            _logger = logger;
-            _skiaSharpResizeSettingsValidator = skiaSharpResizeSettingsValidator;
-            _resizeSpecificationFactory = resizeSpecificationFactory;
-            _skiaSharpImageResizer = skiaSharpImageResizer;
-            _skiaSharpSettings = skiaSharpSettings;
+            return await GetFileStreamAsync(asset.ImageAssetId);
         }
 
-        #endregion
+        var fullFileName = CreateCacheFilePathAndName(resizeSettings, asset);
 
-        public async Task<Stream> GetAsync(IImageAssetRenderable asset, IImageResizeSettings resizeSettings)
+        if (!_skiaSharpSettings.DisableFileCache && await _fileService.ExistsAsync(IMAGE_ASSET_CACHE_CONTAINER_NAME, fullFileName))
         {
-            _skiaSharpResizeSettingsValidator.Validate(resizeSettings, asset);
+            return await _fileService.GetAsync(IMAGE_ASSET_CACHE_CONTAINER_NAME, fullFileName);
+        }
+        else
+        {
+            Stream outputStream;
 
-            // Saving gifs is not supported by SkiaSharp, so they will either be reencoded to another 
-            // format on upload or left as unresizeable.
-            if (!resizeSettings.RequiresResizing(asset) || (asset.FileExtension == GIF_FILE_EXTENSION))
+            using (var imageSource = await LoadImageSource(asset))
             {
-                return await GetFileStreamAsync(asset.ImageAssetId);
-            }
+                var resizeSpecification = _resizeSpecificationFactory.Create(imageSource.Codec, imageSource.Bitmap, resizeSettings);
+                var resizedImage = _skiaSharpImageResizer.Resize(imageSource.Bitmap, resizeSpecification);
 
-            var fullFileName = CreateCacheFilePathAndName(resizeSettings, asset);
+                // Skia only supports a quality setting for Jpeg
+                var data = resizedImage.Encode(imageSource.Codec.EncodedFormat, _skiaSharpSettings.JpegQuality);
 
-            if (!_skiaSharpSettings.DisableFileCache && await _fileService.ExistsAsync(IMAGE_ASSET_CACHE_CONTAINER_NAME, fullFileName))
-            {
-                return await _fileService.GetAsync(IMAGE_ASSET_CACHE_CONTAINER_NAME, fullFileName);
-            }
-            else
-            {
-                Stream outputStream;
-
-                using (var imageSource = await LoadImageSource(asset))
+                if (data == null)
                 {
-                    var resizeSpecification = _resizeSpecificationFactory.Create(imageSource.Codec, imageSource.Bitmap, resizeSettings);
-                    var resizedImage = _skiaSharpImageResizer.Resize(imageSource.Bitmap, resizeSpecification);
-
-                    // Skia only supports a quality setting for Jpeg
-                    var data = resizedImage.Encode(imageSource.Codec.EncodedFormat, _skiaSharpSettings.JpegQuality);
-
-                    if (data == null)
-                    {
-                        // e.g. this happens if trying to encode an image to a gif because gifs aren't supported.
-                        throw new Exception($"Error encoding image asset {asset.ImageAssetId} to {imageSource.Codec.EncodedFormat}");
-                    }
-
-                    outputStream = data.AsStream(true);
+                    // e.g. this happens if trying to encode an image to a gif because gifs aren't supported.
+                    throw new Exception($"Error encoding image asset {asset.ImageAssetId} to {imageSource.Codec.EncodedFormat}");
                 }
 
-                await WriteImageToFileCacheAsync(fullFileName, outputStream);
+                outputStream = data.AsStream(true);
+            }
 
+            await WriteImageToFileCacheAsync(fullFileName, outputStream);
+
+            outputStream.Position = 0;
+            return outputStream;
+        }
+    }
+
+    private async Task WriteImageToFileCacheAsync(string fullFileName, Stream outputStream)
+    {
+        if (!_skiaSharpSettings.DisableFileCache)
+        {
+            try
+            {
+                // Try and create the cache file, but don't throw an error if it fails - it will be attempted again on the next request
                 outputStream.Position = 0;
-                return outputStream;
+                await _fileService.CreateIfNotExistsAsync(IMAGE_ASSET_CACHE_CONTAINER_NAME, fullFileName, outputStream);
             }
-        }
-
-        private async Task WriteImageToFileCacheAsync(string fullFileName, Stream outputStream)
-        {
-            if (!_skiaSharpSettings.DisableFileCache)
+            catch (Exception ex)
             {
-                try
+                if (Debugger.IsAttached)
                 {
-                    // Try and create the cache file, but don't throw an error if it fails - it will be attempted again on the next request
-                    outputStream.Position = 0;
-                    await _fileService.CreateIfNotExistsAsync(IMAGE_ASSET_CACHE_CONTAINER_NAME, fullFileName, outputStream);
+                    throw;
                 }
-                catch (Exception ex)
+                else
                 {
-                    if (Debugger.IsAttached)
-                    {
-                        throw;
-                    }
-                    else
-                    {
-                        _logger.LogError(0, ex, "Error creating image asset cache file. Container name {ContainerName}, {fullFileName}", IMAGE_ASSET_CACHE_CONTAINER_NAME, fullFileName);
-                    }
+                    _logger.LogError(0, ex, "Error creating image asset cache file. Container name {ContainerName}, {fullFileName}", IMAGE_ASSET_CACHE_CONTAINER_NAME, fullFileName);
                 }
             }
         }
+    }
 
-        public Task ClearAsync(string fileNameOnDisk)
+    public Task ClearAsync(string fileNameOnDisk)
+    {
+        return _fileService.DeleteDirectoryAsync(IMAGE_ASSET_CACHE_CONTAINER_NAME, fileNameOnDisk);
+    }
+
+    private async Task<ImageFileSource> LoadImageSource(IImageAssetRenderable imageAsset)
+    {
+        var fileStream = await GetFileStreamAsync(imageAsset.ImageAssetId);
+        var result = ImageFileSource.Load(fileStream);
+
+        if (!result.IsLoaded)
         {
-            return _fileService.DeleteDirectoryAsync(IMAGE_ASSET_CACHE_CONTAINER_NAME, fileNameOnDisk);
+            result.Dispose();
+            throw new Exception("Unable to load image asset " + imageAsset.ImageAssetId);
         }
 
-        #region private methods
+        return result;
+    }
 
-        private async Task<ImageFileSource> LoadImageSource(IImageAssetRenderable imageAsset)
+    private async Task<Stream> GetFileStreamAsync(int imageAssetId)
+    {
+        var query = new GetImageAssetFileByIdQuery(imageAssetId);
+        var result = await _queryExecutor.ExecuteAsync(query);
+
+        if (result == null || result.ContentStream == null)
         {
-            var fileStream = await GetFileStreamAsync(imageAsset.ImageAssetId);
-            var result = ImageFileSource.Load(fileStream);
-
-            if (!result.IsLoaded)
-            {
-                result.Dispose();
-                throw new Exception("Unable to load image asset " + imageAsset.ImageAssetId);
-            }
-
-            return result;
+            throw new FileNotFoundException(imageAssetId.ToString());
         }
 
-        private async Task<Stream> GetFileStreamAsync(int imageAssetId)
-        {
-            var query = new GetImageAssetFileByIdQuery(imageAssetId);
-            var result = await _queryExecutor.ExecuteAsync(query);
+        return result.ContentStream;
+    }
 
-            if (result == null || result.ContentStream == null)
-            {
-                throw new FileNotFoundException(imageAssetId.ToString());
-            }
+    private string CreateCacheFilePathAndName(IImageResizeSettings settings, IImageAssetRenderable asset)
+    {
+        var fileName = settings.CreateCacheFileName();
+        var fileNameWithExtension = Path.ChangeExtension(fileName, asset.FileExtension);
 
-            return result.ContentStream;
-        }
-
-        private string CreateCacheFilePathAndName(IImageResizeSettings settings, IImageAssetRenderable asset)
-        {
-            var fileName = settings.CreateCacheFileName();
-            var fileNameWithExtension = Path.ChangeExtension(fileName, asset.FileExtension);
-
-            return asset.FileNameOnDisk + "/" + fileNameWithExtension;
-        }
-
-        #endregion
+        return asset.FileNameOnDisk + "/" + fileNameWithExtension;
     }
 }

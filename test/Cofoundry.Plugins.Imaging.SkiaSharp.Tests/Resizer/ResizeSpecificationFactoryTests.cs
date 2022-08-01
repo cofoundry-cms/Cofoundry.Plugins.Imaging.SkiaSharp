@@ -1,7 +1,4 @@
 using Cofoundry.Domain;
-using System;
-using System.Collections;
-using System.Collections.Generic;
 using Xunit;
 
 namespace Cofoundry.Plugins.Imaging.SkiaSharp.Tests
@@ -332,7 +329,7 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp.Tests
         #endregion
 
         #region ImageScaleMode.DownscaleOnly
-        
+
         [Theory]
         [InlineData(ImageFitMode.Crop)]
         [InlineData(ImageFitMode.Pad)]

@@ -1,10 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Reflection;
-using System.Text;
+﻿using System.Reflection;
 
-namespace Cofoundry.Plugins.Imaging.SkiaSharp.Tests
+namespace Cofoundry.Plugins.Imaging.SkiaSharp.Tests.Shared
 {
     public static class EmbeddedResourceImageFileLoader
     {
