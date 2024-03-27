@@ -1,9 +1,13 @@
-﻿using SkiaSharp;
+using SkiaSharp;
 
 namespace Cofoundry.Plugins.Imaging.SkiaSharp;
 
+/// <summary>
+/// Default implementation of <see cref="ISkiaSharpImageResizer"/>.
+/// </summary>
 public class SkiaSharpImageResizer : ISkiaSharpImageResizer
 {
+    /// <inheritdoc/>
     public SKImage Resize(SKBitmap sourceImage, ResizeSpecification resizeSpecification)
     {
         var canvasSpecification = sourceImage.Info.WithSize(resizeSpecification.CanvasWidth, resizeSpecification.CanvasHeight);

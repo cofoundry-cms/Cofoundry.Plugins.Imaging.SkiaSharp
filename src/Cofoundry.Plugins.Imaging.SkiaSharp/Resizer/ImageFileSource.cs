@@ -1,4 +1,5 @@
-﻿using SkiaSharp;
+using System.Diagnostics.CodeAnalysis;
+using SkiaSharp;
 
 namespace Cofoundry.Plugins.Imaging.SkiaSharp;
 
@@ -8,37 +9,41 @@ namespace Cofoundry.Plugins.Imaging.SkiaSharp;
 /// statements required when working with an image, so only this instance
 /// needs disposing of and not the child elements.
 /// </summary>
-public class ImageFileSource : IDisposable
+public sealed class ImageFileSource : IDisposable
 {
     /// <summary>
     /// The original image stream being processed. This is disposed of
     /// when this instance is disposed.
     /// </summary>
-    public Stream OriginalStream { get; private set; }
+    public required Stream OriginalStream { get; init; }
 
     /// <summary>
     /// Image information loaded from the file header before
     /// the main image is loaded. This is disposed of
     /// when this instance is disposed.
     /// </summary>
-    public SKCodec Codec { get; private set; }
+    public SKCodec? Codec { get; private set; }
 
     /// <summary>
     /// The full Bitmap image data loaded from the file. This is 
     /// disposed of when this instance is disposed.
     /// </summary>
-    public SKBitmap Bitmap { get; private set; }
+    public SKBitmap? Bitmap { get; private set; }
 
     /// <summary>
     /// Indicated that the codec and all bitmap data has been
     /// loaded successfuly.
     /// </summary>
+    [MemberNotNullWhen(true, nameof(Codec))]
+    [MemberNotNullWhen(true, nameof(Bitmap))]
     public bool IsLoaded { get; private set; }
 
     public static ImageFileSource Load(Stream stream)
     {
-        var source = new ImageFileSource();
-        source.OriginalStream = stream;
+        var source = new ImageFileSource
+        {
+            OriginalStream = stream
+        };
 
         using (var managedStream = new SKManagedStream(stream))
         {

@@ -1,18 +1,18 @@
-﻿using Cofoundry.Domain;
+using System.Diagnostics;
+using Cofoundry.Domain;
 using Cofoundry.Domain.CQS;
 using Cofoundry.Domain.Data;
 using Microsoft.Extensions.Logging;
-using System.Diagnostics;
 
 namespace Cofoundry.Plugins.Imaging.SkiaSharp;
 
 /// <summary>
-/// Service for resizing and caching the resulting image.
+/// SkiaSharp implementation of <see cref="IResizedImageAssetFileService"/>.
 /// </summary>
 public class SkiaSharpResizedImageAssetFileService : IResizedImageAssetFileService
 {
-    internal static readonly string IMAGE_ASSET_CACHE_CONTAINER_NAME = "ImageAssetCache";
-    private readonly string GIF_FILE_EXTENSION = "gif";
+    internal const string IMAGE_ASSET_CACHE_CONTAINER_NAME = "ImageAssetCache";
+    private const string GIF_FILE_EXTENSION = "gif";
 
     private readonly IFileStoreService _fileService;
     private readonly IQueryExecutor _queryExecutor;
@@ -41,6 +41,7 @@ public class SkiaSharpResizedImageAssetFileService : IResizedImageAssetFileServi
         _skiaSharpSettings = skiaSharpSettings;
     }
 
+    /// <inheritdoc/>
     public async Task<Stream> GetAsync(IImageAssetRenderable asset, IImageResizeSettings resizeSettings)
     {
         _skiaSharpResizeSettingsValidator.Validate(resizeSettings, asset);
@@ -56,7 +57,13 @@ public class SkiaSharpResizedImageAssetFileService : IResizedImageAssetFileServi
 
         if (!_skiaSharpSettings.DisableFileCache && await _fileService.ExistsAsync(IMAGE_ASSET_CACHE_CONTAINER_NAME, fullFileName))
         {
-            return await _fileService.GetAsync(IMAGE_ASSET_CACHE_CONTAINER_NAME, fullFileName);
+            var stream = await _fileService.GetAsync(IMAGE_ASSET_CACHE_CONTAINER_NAME, fullFileName);
+            if (stream == null)
+            {
+                throw new FileNotFoundException($"Cache file at {nameof(fullFileName)} existed, but could not be read.");
+            }
+
+            return stream;
         }
         else
         {
@@ -64,6 +71,11 @@ public class SkiaSharpResizedImageAssetFileService : IResizedImageAssetFileServi
 
             using (var imageSource = await LoadImageSource(asset))
             {
+                if (!imageSource.IsLoaded)
+                {
+                    throw new InvalidOperationException($"{nameof(imageSource)} is expected to be loaded.");
+                }
+
                 var resizeSpecification = _resizeSpecificationFactory.Create(imageSource.Codec, imageSource.Bitmap, resizeSettings);
                 var resizedImage = _skiaSharpImageResizer.Resize(imageSource.Bitmap, resizeSpecification);
 
@@ -84,6 +96,12 @@ public class SkiaSharpResizedImageAssetFileService : IResizedImageAssetFileServi
             outputStream.Position = 0;
             return outputStream;
         }
+    }
+
+    /// <inheritdoc/>
+    public Task ClearAsync(string fileNameOnDisk)
+    {
+        return _fileService.DeleteDirectoryAsync(IMAGE_ASSET_CACHE_CONTAINER_NAME, fileNameOnDisk);
     }
 
     private async Task WriteImageToFileCacheAsync(string fullFileName, Stream outputStream)
@@ -110,11 +128,6 @@ public class SkiaSharpResizedImageAssetFileService : IResizedImageAssetFileServi
         }
     }
 
-    public Task ClearAsync(string fileNameOnDisk)
-    {
-        return _fileService.DeleteDirectoryAsync(IMAGE_ASSET_CACHE_CONTAINER_NAME, fileNameOnDisk);
-    }
-
     private async Task<ImageFileSource> LoadImageSource(IImageAssetRenderable imageAsset)
     {
         var fileStream = await GetFileStreamAsync(imageAsset.ImageAssetId);
@@ -123,7 +136,7 @@ public class SkiaSharpResizedImageAssetFileService : IResizedImageAssetFileServi
         if (!result.IsLoaded)
         {
             result.Dispose();
-            throw new Exception("Unable to load image asset " + imageAsset.ImageAssetId);
+            throw new Exception($"Unable to load image asset {imageAsset.ImageAssetId}");
         }
 
         return result;
@@ -136,13 +149,13 @@ public class SkiaSharpResizedImageAssetFileService : IResizedImageAssetFileServi
 
         if (result == null || result.ContentStream == null)
         {
-            throw new FileNotFoundException(imageAssetId.ToString());
+            throw new FileNotFoundException($"Could not find file for ImageAssetId {imageAssetId}");
         }
 
         return result.ContentStream;
     }
 
-    private string CreateCacheFilePathAndName(IImageResizeSettings settings, IImageAssetRenderable asset)
+    private static string CreateCacheFilePathAndName(IImageResizeSettings settings, IImageAssetRenderable asset)
     {
         var fileName = settings.CreateCacheFileName();
         var fileNameWithExtension = Path.ChangeExtension(fileName, asset.FileExtension);

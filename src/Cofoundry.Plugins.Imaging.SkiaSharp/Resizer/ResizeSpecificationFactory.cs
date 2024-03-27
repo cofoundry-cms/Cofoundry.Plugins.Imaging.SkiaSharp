@@ -1,10 +1,14 @@
-﻿using Cofoundry.Domain;
+using Cofoundry.Domain;
 using SkiaSharp;
 
 namespace Cofoundry.Plugins.Imaging.SkiaSharp;
 
+/// <summary>
+/// Default implementation of <see cref="IResizeSpecificationFactory"/>.
+/// </summary>
 public class ResizeSpecificationFactory : IResizeSpecificationFactory
 {
+    /// <inheritdoc/>
     public ResizeSpecification Create(
         SKCodec sourceCodec,
         SKBitmap sourceImage,
@@ -61,7 +65,7 @@ public class ResizeSpecificationFactory : IResizeSpecificationFactory
     {
         if (!string.IsNullOrWhiteSpace(resizeSettings.BackgroundColor))
         {
-            if (SKColor.TryParse(resizeSettings.BackgroundColor, out SKColor color))
+            if (SKColor.TryParse(resizeSettings.BackgroundColor, out var color))
             {
                 spec.BackgroundColor = color;
                 return;
@@ -84,7 +88,7 @@ public class ResizeSpecificationFactory : IResizeSpecificationFactory
     /// Width and height are exact values - cropping is used if there is an
     /// aspect ratio difference.
     /// </summary>
-    private void SetCrop(
+    private static void SetCrop(
         ResizeSpecification spec,
         SKBitmap sourceImage,
         IImageResizeSettings resizeSettings
@@ -123,7 +127,7 @@ public class ResizeSpecificationFactory : IResizeSpecificationFactory
     /// Width and height are considered maximum values. The resulting image may be smaller
     //  to maintain its aspect ratio.
     /// </summary>
-    private void SetMax(
+    private static void SetMax(
         ResizeSpecification spec,
         SKBitmap sourceImage,
         IImageResizeSettings resizeSettings
@@ -158,7 +162,7 @@ public class ResizeSpecificationFactory : IResizeSpecificationFactory
     /// Width and height are considered exact values - padding is used if there is an
     /// aspect ratio difference.
     /// </summary>
-    private void SetPad(
+    private static void SetPad(
         ResizeSpecification spec,
         SKBitmap sourceImage,
         IImageResizeSettings resizeSettings
@@ -191,7 +195,7 @@ public class ResizeSpecificationFactory : IResizeSpecificationFactory
         EnforceUpscaleCanvas(spec, resizeSettings);
     }
 
-    private int RoundPixels(float pixels)
+    private static int RoundPixels(float pixels)
     {
         return Convert.ToInt32(Math.Round(pixels, MidpointRounding.AwayFromZero));
     }
@@ -201,12 +205,15 @@ public class ResizeSpecificationFactory : IResizeSpecificationFactory
     /// reset to the original setting as it will have been scaled with a 
     /// capped ratio.
     /// </summary>
-    private void EnforceUpscaleCanvas(
+    private static void EnforceUpscaleCanvas(
         ResizeSpecification spec,
         IImageResizeSettings resizeSettings
         )
     {
-        if (resizeSettings.Scale != ImageScaleMode.UpscaleCanvas) return;
+        if (resizeSettings.Scale != ImageScaleMode.UpscaleCanvas)
+        {
+            return;
+        }
 
         // In ImageFitMode.Max mode, only upscale if the image has not been able to reach any of the 
         // specified dimensions, and even then, only scale the largest 
@@ -237,7 +244,7 @@ public class ResizeSpecificationFactory : IResizeSpecificationFactory
         }
     }
 
-    private void SetAnchor(ResizeSpecification spec, IImageResizeSettings resizeSettings)
+    private static void SetAnchor(ResizeSpecification spec, IImageResizeSettings resizeSettings)
     {
         switch (resizeSettings.Anchor)
         {
@@ -271,31 +278,34 @@ public class ResizeSpecificationFactory : IResizeSpecificationFactory
         }
     }
 
-    private float CalculateAnchorBottom(ResizeSpecification spec)
+    private static float CalculateAnchorBottom(ResizeSpecification spec)
     {
         return CalculateAnchorOffset(spec.CanvasHeight, spec.UncroppedImageHeight);
     }
 
-    private float CalculateAnchorRight(ResizeSpecification spec)
+    private static float CalculateAnchorRight(ResizeSpecification spec)
     {
         return CalculateAnchorOffset(spec.CanvasWidth, spec.UncroppedImageWidth);
     }
 
-    private float CalculateAnchorVerticalMiddle(ResizeSpecification spec)
+    private static float CalculateAnchorVerticalMiddle(ResizeSpecification spec)
     {
         return CalculateAnchorOffset(spec.CanvasHeight, spec.UncroppedImageHeight) / 2;
     }
 
-    private float CalculateAnchorHotizontalCenter(ResizeSpecification spec)
+    private static float CalculateAnchorHotizontalCenter(ResizeSpecification spec)
     {
         return CalculateAnchorOffset(spec.CanvasWidth, spec.UncroppedImageWidth) / 2;
     }
 
-    private float CalculateAnchorOffset(int visiableLength, int uncroppedLength)
+    private static float CalculateAnchorOffset(int visiableLength, int uncroppedLength)
     {
         var difference = visiableLength - uncroppedLength;
 
-        if (difference == 0) return 0;
+        if (difference == 0)
+        {
+            return 0;
+        }
 
         return difference;
     }
@@ -304,7 +314,7 @@ public class ResizeSpecificationFactory : IResizeSpecificationFactory
     /// Calculated the ratio to apply to image dimensions, taking into account
     /// the ImageScaleMode setting, which can be used to limit scaling behavior.
     /// </summary>
-    private float GetResizeRatio(IImageResizeSettings resizeSettings, int resizeValue, int sourceValue)
+    private static float GetResizeRatio(IImageResizeSettings resizeSettings, int resizeValue, int sourceValue)
     {
         var ratio = (float)resizeValue / (float)sourceValue;
 
@@ -318,14 +328,10 @@ public class ResizeSpecificationFactory : IResizeSpecificationFactory
 
     private static bool SupportsTransparency(SKCodec sourceCodec)
     {
-        switch (sourceCodec.EncodedFormat)
+        return sourceCodec.EncodedFormat switch
         {
-            case SKEncodedImageFormat.Gif:
-            case SKEncodedImageFormat.Png:
-            case SKEncodedImageFormat.Webp:
-                return true;
-            default:
-                return false;
-        }
+            SKEncodedImageFormat.Gif or SKEncodedImageFormat.Png or SKEncodedImageFormat.Webp => true,
+            _ => false,
+        };
     }
 }

@@ -1,4 +1,5 @@
-﻿using Cofoundry.Core.Data;
+using System.Diagnostics.CodeAnalysis;
+using Cofoundry.Core.Data;
 using Cofoundry.Core.Validation;
 using Cofoundry.Domain;
 using Cofoundry.Domain.Data;
@@ -6,11 +7,13 @@ using SkiaSharp;
 
 namespace Cofoundry.Plugins.Imaging.SkiaSharp;
 
+/// <summary>
+/// SkiaSharp implementation of <see cref="IImageAssetFileService"/>.
+/// </summary>
 public class SkiaSharpImageAssetFileService : IImageAssetFileService
 {
-    private const string ASSET_FILE_CONTAINER_NAME = "Images";
-
-    private static readonly Dictionary<SKEncodedImageFormat, string> _permittedFormats = new Dictionary<SKEncodedImageFormat, string>() {
+    private static readonly Dictionary<SKEncodedImageFormat, string> _permittedFormats = new()
+    {
         { SKEncodedImageFormat.Gif, "gif" },
         { SKEncodedImageFormat.Jpeg, "jpg" },
         { SKEncodedImageFormat.Png, "png" },
@@ -38,51 +41,51 @@ public class SkiaSharpImageAssetFileService : IImageAssetFileService
         _skiaSharpSettings = skiaSharpSettings;
     }
 
+    /// <inheritdoc/>
     public async Task SaveAsync(
-        IFileSource uploadedFile,
+        IFileSource fileToSave,
         ImageAsset imageAsset,
-        string propertyName
+        string validationErrorPropertyName
         )
     {
-        using (var fileSource = ImageFileSource.Load(await uploadedFile.OpenReadStreamAsync()))
+        using var fileSource = ImageFileSource.Load(await fileToSave.OpenReadStreamAsync());
+
+        ValidateCodec(fileSource.Codec, fileToSave, validationErrorPropertyName);
+        ValidateImage(fileSource.Bitmap, validationErrorPropertyName);
+
+        DetermineOutputFormat(fileSource.Codec, out var outputFormat, out var requiresReEncoding);
+
+        imageAsset.WidthInPixels = fileSource.Bitmap.Width;
+        imageAsset.HeightInPixels = fileSource.Bitmap.Height;
+        imageAsset.FileExtension = _permittedFormats[outputFormat];
+        imageAsset.FileSizeInBytes = fileSource.OriginalStream.Length;
+
+        using (var scope = _transactionScopeManager.Create(_dbContext))
         {
-            ValidateCodec(fileSource.Codec, uploadedFile, propertyName);
-            ValidateImage(fileSource.Bitmap, propertyName);
+            var fileName = Path.ChangeExtension(imageAsset.FileNameOnDisk, imageAsset.FileExtension);
 
-            DetermineOutputFormat(fileSource.Codec, out SKEncodedImageFormat outputFormat, out bool requiresReEncoding);
-
-            imageAsset.WidthInPixels = fileSource.Bitmap.Width;
-            imageAsset.HeightInPixels = fileSource.Bitmap.Height;
-            imageAsset.FileExtension = _permittedFormats[outputFormat];
-            imageAsset.FileSizeInBytes = fileSource.OriginalStream.Length;
-
-            using (var scope = _transactionScopeManager.Create(_dbContext))
+            if (requiresReEncoding)
             {
-                var fileName = Path.ChangeExtension(imageAsset.FileNameOnDisk, imageAsset.FileExtension);
-
-                if (requiresReEncoding)
+                // Convert the image (Quality setting seems to be ignored for pngs)
+                using (var data = fileSource.Bitmap.Encode(outputFormat, _skiaSharpSettings.JpegQuality))
+                using (var outputStream = data.AsStream())
                 {
-                    // Convert the image (Quality setting seems to be ignored for pngs)
-                    using (var data = fileSource.Bitmap.Encode(outputFormat, _skiaSharpSettings.JpegQuality))
-                    using (var outputStream = data.AsStream())
-                    {
-                        await _fileStoreService.CreateAsync(ASSET_FILE_CONTAINER_NAME, fileName, outputStream);
+                    await _fileStoreService.CreateAsync(ImageAssetConstants.FileContainerName, fileName, outputStream);
 
-                        // recalculate size and save
-                        imageAsset.FileSizeInBytes = outputStream.Length;
-                    }
+                    // recalculate size and save
+                    imageAsset.FileSizeInBytes = outputStream.Length;
                 }
-                else
-                {
-                    // Save the raw file directly
-                    fileSource.OriginalStream.Position = 0;
-                    await _fileStoreService.CreateAsync(ASSET_FILE_CONTAINER_NAME, fileName, fileSource.OriginalStream);
-                }
+            }
+            else
+            {
+                // Save the raw file directly
+                fileSource.OriginalStream.Position = 0;
+                await _fileStoreService.CreateAsync(ImageAssetConstants.FileContainerName, fileName, fileSource.OriginalStream);
+            }
 
-                await _dbContext.SaveChangesAsync();
-                await scope.CompleteAsync();
-            };
-        }
+            await _dbContext.SaveChangesAsync();
+            await scope.CompleteAsync();
+        };
     }
 
     private void DetermineOutputFormat(SKCodec codec, out SKEncodedImageFormat imageFormat, out bool requiresReEncoding)
@@ -106,7 +109,7 @@ public class SkiaSharpImageAssetFileService : IImageAssetFileService
     }
 
     private void ValidateCodec(
-        SKCodec codec,
+        [NotNull] SKCodec? codec,
         IFileSource uploadedFile,
         string propertyName
         )
@@ -129,14 +132,11 @@ public class SkiaSharpImageAssetFileService : IImageAssetFileService
     }
 
     private void ValidateImage(
-        SKBitmap bitmap,
+        [NotNull] SKBitmap? bitmap,
         string propertyName
         )
     {
-        if (bitmap == null)
-        {
-            throw new ArgumentNullException(nameof(bitmap));
-        }
+        ArgumentNullException.ThrowIfNull(bitmap);
 
         // bitmap.IsEmpty
         ValidateDimension(bitmap.Width, _imageAssetsSettings.MaxUploadWidth, "width", propertyName);

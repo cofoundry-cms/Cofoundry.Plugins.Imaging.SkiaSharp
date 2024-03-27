@@ -1,10 +1,10 @@
-﻿using Cofoundry.Plugins.Imaging.SkiaSharp.Tests.Shared;
+using Cofoundry.Plugins.Imaging.SkiaSharp.Tests.Shared;
 
 namespace Cofoundry.Plugins.Imaging.SkiaSharp.Tests;
 
 public class TestImage
 {
-    public string FileName { get; set; }
+    public required string FileName { get; set; }
 
     public int Width { get; set; }
 
