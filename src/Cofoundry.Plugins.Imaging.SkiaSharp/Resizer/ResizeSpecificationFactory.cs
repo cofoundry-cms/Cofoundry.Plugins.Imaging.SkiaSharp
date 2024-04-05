@@ -125,7 +125,7 @@ public class ResizeSpecificationFactory : IResizeSpecificationFactory
 
     /// <summary>
     /// Width and height are considered maximum values. The resulting image may be smaller
-    //  to maintain its aspect ratio.
+    /// to maintain its aspect ratio.
     /// </summary>
     private static void SetMax(
         ResizeSpecification spec,
